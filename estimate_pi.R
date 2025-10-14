@@ -55,15 +55,3 @@ estimate_pi_chord <- function(N) {
   
   return(pi_hat)
 }
-
-# 运行例子
-set.seed(2025)  # 固定随机数种子，保证可重复
-
-# 运行方法 1：Monte Carlo 积分法
-cat("Method 1 (Monte Carlo Integration) - π estimation: ", estimate_pi_integral(10000), "\n")
-
-# 运行方法 2：Buffon's Needle 法
-cat("Method 2 (Buffon's Needle) - π estimation: ", estimate_pi_buffon(100000), "\n")
-
-# 运行方法 3：Random Chord 法
-cat("Method 3 (Random Chord) - π estimation: ", estimate_pi_chord(100000), "\n")
