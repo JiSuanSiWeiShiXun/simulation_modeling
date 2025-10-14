@@ -10,7 +10,7 @@ estimate_pi_integral <- function(N) {
 pi_true <- pi
 
 # 设置随机种子，确保结果可复现
-set.seed(2025)
+# set.seed(2025)
 
 # 模拟的次数 M
 M <- 100

@@ -1,18 +1,6 @@
 source("estimate_pi.R")
 
-# 运行例子
-set.seed(2025)  # 固定随机数种子，保证可重复
-
-# 运行方法 1：Monte Carlo 积分法
-cat("Method 1 (Monte Carlo Integration) - π estimation: ", estimate_pi_integral(10000), "\n")
-
-# 运行方法 2：Buffon's Needle 法
-cat("Method 2 (Buffon's Needle) - π estimation: ", estimate_pi_buffon(100000), "\n")
-
-# 运行方法 3：Random Chord 法
-cat("Method 3 (Random Chord) - π estimation: ", estimate_pi_chord(100000), "\n")
-
-# ==================== 可视化部分 ====================
+# set.seed(2025)  # 固定随机数种子，保证可重复
 
 # 设置图形布局为 2x2
 par(mfrow = c(2, 2))

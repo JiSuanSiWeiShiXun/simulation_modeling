@@ -45,7 +45,7 @@ buffon_detailed <- function(N, L = 1, t = 2) {
 }
 
 # 设置参数
-set.seed(2025)
+# set.seed(2025)
 N <- 200  # 针数（可视化用较少的针）
 L <- 1.5  # 针长
 t <- 2    # 线间距

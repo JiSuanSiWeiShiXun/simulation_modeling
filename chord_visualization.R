@@ -39,7 +39,7 @@ chord_detailed <- function(N) {
 }
 
 # 设置参数
-set.seed(2025)
+# set.seed(2025)
 N <- 200  # 弦数（可视化用较少的弦）
 
 # 运行详细模拟
