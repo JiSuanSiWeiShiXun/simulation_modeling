@@ -179,7 +179,7 @@ par(mfrow = c(2, 4))  # 增加到8个图
 rmse_data <- comparison_results[comparison_results$N == 10000, ]
 barplot(rmse_data$RMSE, names.arg = c("MC", "Buffon", "Chord"), 
         main = "RMSE Comparison (N=10000)", ylab = "RMSE", 
-        col = c("red", "green", "blue"))
+        col = c("red", "green", "blue"), cex.main = 0.95)
 
 # 图2: 偏差比较
 bias_data <- comparison_results[comparison_results$N == 10000, ]
@@ -190,7 +190,7 @@ cat("Random Chord 偏差:   ", sprintf("%.6f", bias_data$Bias[bias_data$Method =
 
 barplot(bias_data$Bias, names.arg = c("MC", "Buffon", "Chord"), 
         main = "Bias Comparison (N=10000)", ylab = "Bias", 
-        col = c("red", "green", "blue"))
+        col = c("red", "green", "blue"), cex.main = 0.95)
 # 添加零偏差参考线
 abline(h = 0, col = "black", lty = 2, lwd = 1)
 
@@ -212,7 +212,7 @@ y_max <- max(all_vars) * 2
 
 plot(N_TEST, mc_vars, type = "b", col = "red", lwd = 2, pch = 16,
      main = "Variance vs Sample Size", xlab = "N", ylab = "Variance", 
-     log = "y", ylim = c(y_min, y_max))
+     log = "y", ylim = c(y_min, y_max), cex.main = 0.9)
 lines(N_TEST, buffon_vars, type = "b", col = "green", lwd = 2, pch = 17)
 lines(N_TEST, chord_vars, type = "b", col = "blue", lwd = 2, pch = 18)
 legend("topright", legend = c("Monte Carlo", "Buffon's Needle", "Random Chord"),
@@ -236,7 +236,7 @@ y_max_cons <- max(all_consistency) * 1.2
 
 plot(N_CONSISTENCY, mc_consistency, type = "b", col = "red", lwd = 2, pch = 16,
      main = "Consistency Check (Var×N)", xlab = "N", ylab = "Variance × N",
-     ylim = c(y_min_cons, y_max_cons))
+     ylim = c(y_min_cons, y_max_cons), cex.main = 0.95)
 lines(N_CONSISTENCY, buffon_consistency, type = "b", col = "green", lwd = 2, pch = 17)
 lines(N_CONSISTENCY, chord_consistency, type = "b", col = "blue", lwd = 2, pch = 18)
 
@@ -252,7 +252,7 @@ legend("topright", legend = c("Monte Carlo", "Buffon's Needle", "Random Chord"),
 precision_matrix <- matrix(precision_table$Required_N, nrow = 3)
 colnames(precision_matrix) <- paste("±", TARGET_ERRORS)
 rownames(precision_matrix) <- c("MC", "Buffon", "Chord")
-barplot(log10(precision_matrix), beside = TRUE, 
+barplot(log10(precision_matrix), beside = TRUE, cex.main = 0.9,
         main = "Required Sample Size (Log10)", xlab = "Target Precision", 
         ylab = "Log10(Required N)", col = c("red", "green", "blue"), legend = TRUE)
 
@@ -260,7 +260,7 @@ barplot(log10(precision_matrix), beside = TRUE,
 efficiency_data <- timing_results[timing_results$N == 10000, ]
 barplot(efficiency_data$Operations_per_sec, names.arg = c("MC", "Buffon", "Chord"),
         main = "Computational Efficiency", ylab = "Operations/sec",
-        col = c("red", "green", "blue"))
+        col = c("red", "green", "blue"), cex.main = 0.9)
 
 # 图7: 偏差随样本量变化趋势
 mc_bias <- comparison_results[comparison_results$Method == "Monte Carlo", "Bias"]
@@ -280,7 +280,7 @@ y_max_bias <- max(all_bias) * 1.2
 
 plot(N_TEST, mc_bias, type = "b", col = "red", lwd = 2, pch = 16,
      main = "Bias vs Sample Size", xlab = "N", ylab = "Bias",
-     ylim = c(y_min_bias, y_max_bias))
+     ylim = c(y_min_bias, y_max_bias), cex.main = 0.9)
 lines(N_TEST, buffon_bias, type = "b", col = "green", lwd = 2, pch = 17)
 lines(N_TEST, chord_bias, type = "b", col = "blue", lwd = 2, pch = 18)
 abline(h = 0, col = "black", lty = 2, lwd = 1)  # 零偏差参考线
@@ -298,7 +298,7 @@ performance_scores <- data.frame(
 )
 
 barplot(t(as.matrix(performance_scores[,-1])), beside = TRUE,
-        names.arg = c("MC", "Buffon", "Chord"),
+        names.arg = c("MC", "Buffon", "Chord"), cex.main = 0.9,
         main = "Overall Performance", ylab = "Score (1-10)",
         col = rainbow(5), legend = c("Low Bias", "Low Var", "Consistency", "Efficiency", "Speed"))
 
