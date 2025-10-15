@@ -57,7 +57,8 @@ for (N in N_TEST) {
     Bias = c(mc_bias, buffon_bias, chord_bias), # 偏差
     Variance = c(mc_variance, buffon_variance, chord_variance), # 方差
     RMSE = c(mc_rmse, buffon_rmse, chord_rmse), # 均方根误差
-    Std_Error = sqrt(c(mc_variance, buffon_variance, chord_variance)) # 标准误差 (便于后续分析）
+    Std_Error = sqrt(c(mc_variance, buffon_variance, chord_variance)), # 标准误差 (便于后续分析）
+    Consistency = c(mc_variance * N, buffon_variance * N, chord_variance * N) # 一致性指标
   )
   
   comparison_results <- rbind(comparison_results, temp_df)
@@ -350,3 +351,11 @@ cat("3. 历史研究: Buffon's Needle\n")
 # 保存结果到文件
 write.csv(comparison_results, "method_comparison_results.csv", row.names = FALSE)
 cat("\n详细结果已保存至: method_comparison_results.csv\n")
+
+# 保存计算效率结果
+write.csv(timing_results, "computational_efficiency_results.csv", row.names = FALSE)
+cat("计算效率结果已保存至: computational_efficiency_results.csv\n")
+
+# 保存精度要求分析结果
+write.csv(precision_table, "precision_requirement_results.csv", row.names = FALSE)
+cat("精度要求分析结果已保存至: precision_requirement_results.csv\n")
