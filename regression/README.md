@@ -1,0 +1,3 @@
+10. (10 points)Generate 1,000 random samples from a Binomial distribution with parameters n=300 and p=0.01, and from a Poisson distribution with parameter λ=np. Use Python to simulate both sets of samples and visualize them using subplots: the first subplot should show the histogram of the Binomial distribution, and the second subplot should show the histogram of the Poisson distribution. Compare their shapes and discuss whether the Poisson distribution provides a good approximation to the Binomial distribution under these conditions.
+中文翻译：
+10. (10 分)生成来自参数 n=300, p=0.01 的二项分布的 1000 个随机样本，以及来自参数 λ=np 的泊松分布的 1000 个随机样本。使用 Python 模拟这两组样本，并利用子图进行可视化：第一个子图应显示二项分布的直方图，第二个子图应显示泊松分布的直方图。比较它们的形状，并讨论在这些条件下泊松分布是否为二项分布提供了一个良好的近似。
