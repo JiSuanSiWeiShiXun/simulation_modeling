@@ -1,211 +1,252 @@
-# 麦当劳排队系统模拟
+# McDonald's Queuing System Simulation
 
-## 题目背景
+## Problem Background
 
-模拟麦当劳的排队服务系统，该系统包含两个串联的服务窗口：
+Simulate McDonald's queuing service system, which contains two tandem service windows:
 
 ```
-顾客到达 → [服务窗口 G₁] → [取餐窗口 G₂] → 离开
-          (点餐付款)      (取餐)
+Customer Arrival → [Service Window G₁] → [Pickup Window G₂] → Departure
+                   (Order & Payment)       (Pick up food)
 ```
 
-### 系统结构
+### System Structure
 
-- **服务窗口 (Server 1, G₁)**: 顾客在此点餐并付款
-- **取餐窗口 (Server 2, G₂)**: 顾客在此领取食物
-- **流程**: 顾客必须先在服务窗口完成点餐付款，然后才能到取餐窗口取餐
+- **Service Window (Server 1, G₁)**: Customers order and pay here
+- **Pickup Window (Server 2, G₂)**: Customers pick up food here
+- **Process**: Customers must complete ordering and payment at the service window before they can pick up food at the pickup window
 
-### 系统参数
+### System Parameters
 
-| 参数 | 值 | 说明 |
-|------|-----|------|
-| **顾客到达率** | 21人/小时 | 泊松过程 |
-| **服务窗口服务时间** | 均值 0.03小时 (1.8分钟) | 指数分布 |
-| **取餐窗口服务时间** | 均值 0.05小时 (3分钟) | 指数分布 |
-| **营业时间** | 10:00 AM - 8:00 PM | 共10小时 |
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| **Customer Arrival Rate** | 21 customers/hour | Poisson process |
+| **Service Window Service Time** | Mean 0.03 hours (1.8 minutes) | Exponential distribution |
+| **Pickup Window Service Time** | Mean 0.05 hours (3 minutes) | Exponential distribution |
+| **Business Hours** | 10:00 AM - 8:00 PM | Total 10 hours |
 
-## 任务要求
+## Task Requirements
 
-### Task a) 模拟2小时运营
+### Task a) Simulate 2-hour Operation
 
-**目标**: 模拟麦当劳运营2小时，记录每个顾客的详细信息
+**Objective**: Simulate McDonald's operation for 2 hours, recording detailed information for each customer
 
-**输出要求**:
-- 每个顾客的到达时间
-- 在服务窗口的开始和结束时间
-- 在取餐窗口的开始和结束时间
-- 每个顾客在系统中的总时间
+**Output Requirements**:
+- Each customer's arrival time
+- Start and end times at the service window
+- Start and end times at the pickup window
+- Total time each customer spends in the system
 
-### Task b) 估计顾客平均系统时间
+### Task b) Estimate Average Customer System Time
 
-**目标**: 通过模拟10小时运营，估计顾客在系统中的平均停留时间
+**Objective**: Estimate the average time customers spend in the system by simulating 10-hour operation
 
-**方法**:
-- 运行多次模拟（如100次）
-- 计算每次模拟中顾客的平均系统时间
-- 给出均值和置信区间
+**Method**:
+- Run multiple simulations (e.g., 100 times)
+- Calculate average system time for customers in each simulation
+- Provide mean and confidence interval
 
-### Task c) 估计加班时间
+### Task c) Estimate Overtime
 
-**场景**: 
-- 营业时间: 10:00 AM - 8:00 PM (10小时)
-- 8:00 PM后，**不再接受新顾客**
-- 但需要服务完所有已经在系统中的顾客
+**Scenario**: 
+- Business hours: 10:00 AM - 8:00 PM (10 hours)
+- After 8:00 PM, **no new customers accepted**
+- But must serve all customers already in the system
 
-**目标**: 估计服务完所有顾客需要的预期加班时间
+**Objective**: Estimate the expected overtime needed to serve all customers
 
-**计算方法**:
+**Calculation Method**:
 ```
-加班时间 = 最后一个顾客离开时间 - 营业结束时间 (8:00 PM)
-```
-
-## 理论基础
-
-### 泊松到达过程
-
-顾客到达服从泊松过程，到达间隔时间服从指数分布：
-
-**齐次泊松过程（传统模型）**:
-```
-到达间隔 ~ Exponential(λ = 21)  # 到达率恒定
+Overtime = Last customer departure time - Business closing time (8:00 PM)
 ```
 
-**非齐次泊松过程（考虑饭点高峰）**:
-```
-到达率 λ(t) 随时间变化：
-- 早餐高峰 (10:00-11:30): λ ≈ 25-30 人/小时
-- 午餐高峰 (11:30-13:30): λ ≈ 40-50 人/小时
-- 非高峰 (14:00-17:00): λ ≈ 5-10 人/小时
-- 晚餐高峰 (17:00-19:00): λ ≈ 45-50 人/小时
-- 平均到达率保持 21 人/小时
-```
+## Theoretical Foundation
 
-### 指数服务时间
-两个服务窗口的服务时间都服从指数分布：
+### Poisson Arrival Process
+
+Customer arrivals follow a Poisson process, with inter-arrival times following exponential distribution:
+
+**Homogeneous Poisson Process (Traditional Model)**:
 ```
-服务窗口服务时间 ~ Exponential(μ₁ = 1/0.03 = 33.33)
-取餐窗口服务时间 ~ Exponential(μ₂ = 1/0.05 = 20)
+Inter-arrival times ~ Exponential(λ = 21)  # Constant arrival rate
 ```
 
-### 排队论指标
+**Non-homogeneous Poisson Process (Considering Meal Rush Hours)**:
+```
+Arrival rate λ(t) varies with time:
+- Breakfast peak (10:00-11:30): λ ≈ 25-30 customers/hour
+- Lunch peak (11:30-13:30): λ ≈ 40-50 customers/hour
+- Off-peak (14:00-17:00): λ ≈ 5-10 customers/hour
+- Dinner peak (17:00-19:00): λ ≈ 45-50 customers/hour
+- Average arrival rate remains 21 customers/hour
+```
 
-- **等待时间**: 顾客到达到开始服务的时间
-- **服务时间**: 实际接受服务的时间
-- **系统时间**: 从到达到离开的总时间 = 等待时间 + 服务时间
-- **利用率**: 服务器忙碌的时间比例
+### Exponential Service Time
+Service times at both windows follow exponential distribution:
+```
+Service window service time ~ Exponential(μ₁ = 1/0.03 = 33.33)
+Pickup window service time ~ Exponential(μ₂ = 1/0.05 = 20)
+```
 
-## 文件说明
+### Queuing Theory Metrics
 
-- `README.md`: 题目说明文档（本文件）
-- `simulation_functions.R`: 模拟相关函数
-  - `generate_arrivals()`: 齐次泊松过程顾客到达
-  - `generate_arrivals_nhpp()`: **非齐次泊松过程顾客到达（考虑饭点高峰）**
-  - `lambda_t()`: 时变到达率函数
-  - `plot_arrival_rate()`: 可视化到达率模式
-  - `simulate_mcdonalds()`: 完整系统模拟（时间片法）
-- `mcdonalds_simulation.R`: 主模拟程序（使用传统齐次泊松）
-- `event_driven_simulation.R`: **事件驱动模拟程序（游戏引擎式）**
-  - `simulate_event_driven()`: 事件驱动核心函数
-  - 每一帧处理一个事件（到达/服务完成）
-  - 精确追踪每个顾客的完整生命周期
-- `compare_arrival_patterns.R`: **对比齐次 vs 非齐次泊松过程**
-- `visualization.R`: 结果可视化脚本
-- `verify_exponential.R`: 验证泊松过程间隔时间为指数分布
+- **Wait Time**: Time from arrival to service start
+- **Service Time**: Actual service duration
+- **System Time**: Total time from arrival to departure = Wait time + Service time
+- **Utilization**: Proportion of time server is busy
 
-## 运行方法
+## File Descriptions
 
-### 方法1: 基础模拟（时间片法 + 齐次泊松）
+- `README.md`: Problem description document (this file)
+- `simulation_functions.R`: Simulation-related functions
+  - `generate_arrivals()`: Homogeneous Poisson process customer arrivals
+  - `generate_arrivals_nhpp()`: **Non-homogeneous Poisson process customer arrivals (considering meal rush hours)**
+  - `lambda_t()`: Time-varying arrival rate function
+  - `plot_arrival_rate()`: Visualize arrival rate pattern
+  - `simulate_mcdonalds()`: Complete system simulation (time-slicing method)
+- `mcdonalds_simulation.R`: Main simulation program (using traditional homogeneous Poisson)
+- `event_driven_simulation.R`: **Event-driven simulation program (game engine style)**
+  - `simulate_event_driven()`: Event-driven core function
+  - Processes one event per frame (arrival/service completion)
+  - Precisely tracks each customer's complete lifecycle
+- `compare_arrival_patterns.R`: **Compare homogeneous vs non-homogeneous Poisson process**
+- `visualization.R`: Results visualization script
+- `generate_report_table.R`: Generate report tables in multiple formats
+
+## Execution Methods
+
+### Method 1: Basic Simulation (Time-slicing + Homogeneous Poisson)
 ```r
-# 运行主模拟程序
+# Run main simulation program
 source("mcdonalds_simulation.R")
 
-# 或在命令行中运行
+# Or run from command line
 Rscript mcdonalds_simulation.R
 ```
 
-### 方法2: 事件驱动模拟（游戏引擎式）⭐ 推荐
+### Method 2: Event-Driven Simulation (Game Engine Style) ⭐ Recommended
 ```r
-# 使用事件驱动方法，每一帧处理一个事件
+# Use event-driven method, process one event per frame
 source("event_driven_simulation.R")
 
-# 或在命令行中运行
+# Or run from command line
 Rscript event_driven_simulation.R
 ```
 
-**事件驱动法优势：**
-- ✓ 游戏引擎式循环，直观易懂
-- ✓ 精确追踪每个顾客状态
-- ✓ 详细的事件日志输出
-- ✓ 自动处理营业结束后的服务
+**Event-Driven Method Advantages:**
+- ✓ Game engine-style loop, intuitive and easy to understand
+- ✓ Precisely track each customer's state
+- ✓ Detailed event log output
+- ✓ Automatically handles service after business hours
 
-### 方法3: 对比分析（齐次 vs 非齐次泊松）
+### Method 3: Comparative Analysis (Homogeneous vs Non-homogeneous Poisson)
 ```r
-# 对比两种到达模式的影响
+# Compare the impact of two arrival patterns
 source("compare_arrival_patterns.R")
 
-# 或在命令行中运行
+# Or run from command line
 Rscript compare_arrival_patterns.R
 ```
 
-### 方法4: 使用非齐次泊松进行模拟
+### Method 4: Simulation with Non-homogeneous Poisson
 ```r
 source("simulation_functions.R")
 
-# 使用非齐次泊松过程（考虑饭点高峰）
+# Use non-homogeneous Poisson process (considering meal rush hours)
 results <- simulate_mcdonalds(
   sim_time = 10, 
   lambda = 21,
-  use_nhpp = TRUE  # 启用非齐次泊松
+  use_nhpp = TRUE  # Enable non-homogeneous Poisson
 )
 ```
 
-## 预期输出
+## Expected Outputs
 
-1. **控制台输出**: 
-   - 各任务的数值结果
-   - 统计摘要
-   - 置信区间
+1. **Console Output**: 
+   - Numerical results for each task
+   - Statistical summaries
+   - Confidence intervals
 
-2. **CSV文件**: 
-   - 详细的顾客记录数据
+2. **CSV Files**: 
+   - Detailed customer record data
 
-3. **可视化图表**:
-   - 顾客到达和离开曲线
-   - 系统时间分布
-   - 等待时间比较
-   - 加班时间分布
+3. **Visualization Charts**:
+   - Customer arrival and departure curves
+   - System time distribution
+   - Wait time comparison
+   - Overtime distribution
 
-## 关键发现
+## Key Findings
 
-通过模拟分析可以得出：
+Through simulation analysis, we can conclude:
 
-### 齐次泊松过程（传统模型）
-1. **系统瓶颈**: 取餐窗口（服务率20人/小时）比服务窗口（33.33人/小时）慢，可能成为系统瓶颈
-2. **平均等待时间**: 顾客在取餐窗口的等待时间通常长于服务窗口
-3. **加班必要性**: 由于顾客随机到达和服务时间的随机性，通常需要一定的加班时间
-4. **系统稳定性**: λ = 21 < μ₂ = 20，系统处于临界状态，长期运行可能不稳定
+### Homogeneous Poisson Process (Traditional Model)
+1. **System Bottleneck**: Pickup window (service rate 20 customers/hour) is slower than service window (33.33 customers/hour), may become system bottleneck
+2. **Average Wait Time**: Customer wait time at pickup window is usually longer than at service window
+3. **Overtime Necessity**: Due to random customer arrivals and service times, some overtime is usually necessary
+4. **System Stability**: λ = 21 > μ₂ = 20, system is at critical state, may be unstable over long runs
 
-### 非齐次泊松过程（考虑饭点高峰）
-1. **更真实的模拟**: 到达率随时间变化，更符合实际餐饮场景
-2. **高峰期压力**: 
-   - 午餐和晚餐高峰期，系统压力显著增大
-   - 平均系统时间比齐次模型增加 **50-60%**
-   - 平均等待时间增加 **60-70%**
-3. **峰谷差异明显**:
-   - 高峰期到达率可达 40-50 人/小时（超过取餐窗口处理能力）
-   - 非高峰期仅 5-10 人/小时
-   - 峰谷比约 **6-7 倍**
-4. **管理启示**:
-   - 需要动态调整人员配置
-   - 高峰期可能需要增加服务窗口
-   - 可通过优惠引导顾客错峰就餐
+### Non-homogeneous Poisson Process (Considering Meal Rush Hours)
+1. **More Realistic Simulation**: Arrival rate varies with time, more consistent with actual restaurant scenarios
+2. **Peak Hour Pressure**: 
+   - During lunch and dinner peaks, system pressure significantly increases
+   - Average system time increases by **50-60%** compared to homogeneous model
+   - Average wait time increases by **60-70%**
+3. **Significant Peak-Valley Differences**:
+   - Peak hour arrival rate can reach 40-50 customers/hour (exceeds pickup window capacity)
+   - Off-peak hours only 5-10 customers/hour
+   - Peak-to-valley ratio approximately **6-7 times**
+4. **Management Insights**:
+   - Need to dynamically adjust staffing
+   - May need to add service windows during peak hours
+   - Can use promotions to guide customers to dine off-peak
 
-### 对比总结
+### Comparison Summary
 
-| 指标 | 齐次泊松 | 非齐次泊松（饭点高峰） | 差异 |
-|------|----------|----------------------|------|
-| **平均顾客数** | 208人 | 211人 | +1.4% |
-| **平均系统时间** | 43分钟 | 65分钟 | **+51.7%** |
-| **平均等待时间** | 38分钟 | 61分钟 | **+60.5%** |
-| **最大系统时间** | 88分钟 | 140分钟 | **+59.0%** |
-| **模型适用性** | 理论分析 | 实际运营 | - |
+| Metric | Homogeneous Poisson | Non-homogeneous Poisson (Meal Peaks) | Difference |
+|--------|---------------------|--------------------------------------|------------|
+| **Average Customers** | 208 | 211 | +1.4% |
+| **Average System Time** | 43 minutes | 65 minutes | **+51.7%** |
+| **Average Wait Time** | 38 minutes | 61 minutes | **+60.5%** |
+| **Max System Time** | 88 minutes | 140 minutes | **+59.0%** |
+| **Model Applicability** | Theoretical analysis | Actual operations | - |
+
+## Technical Implementation
+
+### Event-Driven Simulation
+- Game engine-style frame-by-frame processing
+- Three event types:
+  1. Customer arrival
+  2. Service window completion
+  3. Pickup window completion
+- Automatic handling of business hours closure
+
+### Non-homogeneous Poisson Process
+- Time-varying arrival rate λ(t)
+- Implementation methods:
+  - Thinning algorithm
+  - Inversion method
+- Simulates realistic meal rush patterns
+
+## Visualization
+
+The simulation generates multiple visualization charts:
+1. Cumulative arrival/departure curves
+2. System time distribution histograms
+3. Wait time comparison boxplots
+4. Customer journey Gantt charts
+5. Overtime distribution and CDF
+6. Time component stacked charts
+7. Service time comparison scatter plots
+
+## Dependencies
+
+- R (≥ 3.5.0)
+- Base R packages (no external dependencies required)
+
+## Author
+
+Simulation Modeling Course Project
+
+## License
+
+MIT License

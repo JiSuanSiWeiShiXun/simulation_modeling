@@ -372,11 +372,11 @@ plot_data <- display_data[1:min(30, nrow(display_data)), ]
 plot.new()
 plot.window(xlim = c(0, 1), ylim = c(0, 1))
 
-text(0.5, 0.97, "Task a) 麦当劳排队系统 - 2小时运营详细记录", 
+text(0.5, 0.97, "Task a) McDonald's Queuing System - 2-Hour Operation Detailed Records", 
      cex = 1.5, font = 2, col = "#2c3e50")
 
 summary_y <- 0.91
-text(0.5, summary_y, sprintf("总顾客数: %d人 | 平均系统时间: %.2f分钟 | 平均等待时间: %.2f分钟 | 窗口2平均等待: %.2f分钟",
+text(0.5, summary_y, sprintf("Total Customers: %d | Avg System Time: %.2f min | Avg Wait Time: %.2f min | Window 2 Avg Wait: %.2f min",
                              total_customers, avg_system_time, avg_wait_time, avg_wait2),
      cex = 0.9, col = "#34495e")
 
@@ -390,9 +390,9 @@ start_y <- 0.85
 y_pos <- start_y
 x_pos <- start_x
 
-headers <- c("顾客\n编号", "到达\n时间", "窗口1\n开始", "窗口1\n结束", 
-             "窗口2\n开始", "窗口2\n结束", "窗口1\n等待", "窗口1\n服务",
-             "窗口2\n等待", "窗口2\n服务", "系统\n总时间")
+headers <- c("Customer\nID", "Arrival\nTime", "Window 1\nStart", "Window 1\nEnd", 
+             "Window 2\nStart", "Window 2\nEnd", "Window 1\nWait", "Window 1\nService",
+             "Window 2\nWait", "Window 2\nService", "Total\nSystem Time")
 
 for (j in 1:n_cols) {
   rect(x_pos, y_pos - cell_height, x_pos + col_widths[j], y_pos, 
@@ -431,11 +431,11 @@ for (i in 1:n_rows) {
 }
 
 text(0.5, 0.02, 
-     sprintf("注：所有时间单位为分钟。黄色背景=等待时间，蓝色背景=服务时间，粉色行=等待超10分钟。完整数据共%d位顾客，上表显示前30位。", total_customers),
+     sprintf("Note: All times in minutes. Yellow=Wait time, Blue=Service time, Pink rows=Wait >10 min. Total %d customers, showing first 30.", total_customers),
      cex = 0.7, col = "#7f8c8d")
 
 dev.off()
-cat("✓ 表格图片已保存至: task_a_report_table.png\n")
+cat("✓ Table image saved to: task_a_report_table.png\n")
 
 cat("\n")
 cat(paste(rep("=", 80), collapse = ""), "\n")
