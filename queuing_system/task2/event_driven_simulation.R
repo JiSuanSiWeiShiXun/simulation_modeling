@@ -1,319 +1,138 @@
-# ==============================================================================
-# McDonald's Advanced Simulation (Task 2)
-# Method: Non-homogeneous Poisson Process (NHPP) using Thinning Algorithm
-# Scenario: Series Queue with Parallel Catering Windows (M(t)/M/1 -> M/M/2)
-# ==============================================================================
-
-# ------------------------------------------------------------------------------
-# PART 1: DEFINING THE "REALITY" (Parameters & Arrival Function)
-# ------------------------------------------------------------------------------
-set.seed(123) # Ensure reproducibility
-
-# 1. Service Parameters (Based on Task 1 data)
-# ---------------------------------------------------
-# Service Window: Mean 0.03h -> Rate ~33.33/h
-mu_service <- 1 / 0.03   
-# Catering Window: Mean 0.05h -> Rate ~20.00/h (Per server)
-mu_catering <- 1 / 0.05   
-
-# 2. Operational Hours
-# ---------------------------------------------------
-sim_duration <- 10.0 # 10:00 AM to 8:00 PM
-
-# 3. Dynamic Arrival Rate Function lambda(t) [cite: 19]
-# ---------------------------------------------------
-# We model customer flow with a Base Rate + Two Gaussian Peaks (Lunch & Dinner)
-# t = 0 represents 10:00 AM
-# Lunch Peak: t=2.5 (12:30 PM), Height=30
-# Dinner Peak: t=8.0 (6:00 PM), Height=25
-# Base Rate: 10
-get_lambda_at_t <- function(t) {
-  # Vectorized version for plotting
-  result <- numeric(length(t))
-  for(i in seq_along(t)) {
-    if (t[i] > sim_duration) {
-      result[i] <- 0
-    } else {
-      base_rate <- 10
-      lunch_peak <- 35 * exp(-0.5 * ((t[i] - 2.5) / 0.8)^2)
-      dinner_peak <- 30 * exp(-0.5 * ((t[i] - 7.5) / 1.0)^2)
-      result[i] <- base_rate + lunch_peak + dinner_peak
-    }
-  }
-  return(result)
+get_arrival_rate <- function(t) {
+  if (t < 1.5) return(27.5)
+  else if (t < 3.5) return(47.5)
+  else if (t < 7.0) return(10)
+  else if (t < 9.0) return(42.5)
+  else return(17.5)
 }
 
-# 4. Thinning Algorithm to Generate Arrival Times
-# ---------------------------------------------------
-# Logic: Generate points at max_lambda, then accept/reject based on real lambda(t)
-generate_nhpp_schedule <- function(duration) {
-  max_lambda <- 60 # Upper bound for rejection sampling (must be > peak rate)
+generate_next_arrival_nhpp <- function(current_time, lambda_max = 50) {
+  repeat {
+    inter_arrival <- rexp(1, rate = lambda_max)
+    candidate_time <- current_time + inter_arrival
+    lambda_t <- get_arrival_rate(candidate_time)
+    u <- runif(1)
+    if (u <= lambda_t / lambda_max) return(candidate_time)
+    current_time <- candidate_time
+  }
+}
+
+run_simulation <- function(n_service_servers = 1, n_pickup_servers = 1,
+                          mu_service = 33.33, mu_pickup = 20,
+                          sim_hours = 10, closing_time = 10, seed = NULL) {
+  if (!is.null(seed)) set.seed(seed)
+  
   t <- 0
-  arrivals <- numeric()
-
-  while (t < duration) {
-    # Step A: Jump forward assuming max rate (Potential Arrival)
-    t <- t + rexp(1, rate = max_lambda)
-
-    if (t > duration) break
-
-    # Step B: Acceptance Test
-    # Probability of acceptance = Real_Rate(t) / Max_Rate
-    real_lambda <- get_lambda_at_t(t)
-    if (runif(1) < (real_lambda / max_lambda)) {
-      arrivals <- c(arrivals, t) # Accepted!
+  customer_id <- 0
+  service_busy <- rep(FALSE, n_service_servers)
+  pickup_busy <- rep(FALSE, n_pickup_servers)
+  Q1 <- integer(0)
+  Q2 <- integer(0)
+  events <- data.frame(type=character(), time=numeric(), customer=integer(),
+                      server=integer(), stringsAsFactors=FALSE)
+  customer_data <- data.frame(id=integer(), arrival=numeric(), svc_start=numeric(),
+                             svc_end=numeric(), pick_start=numeric(), pick_end=numeric())
+  
+  first_arrival <- generate_next_arrival_nhpp(0)
+  events <- rbind(events, data.frame(type="ARRIVAL", time=first_arrival, customer=0, server=0))
+  
+  while (nrow(events) > 0) {
+    next_idx <- which.min(events$time)
+    event <- events[next_idx,]
+    events <- events[-next_idx,]
+    
+    t <- event$time
+    if (t > sim_hours && length(Q1) == 0 && length(Q2) == 0 && 
+        !any(service_busy) && !any(pickup_busy)) break
+    
+    if (event$type == "ARRIVAL") {
+      customer_id <- customer_id + 1
+      new_cust <- data.frame(id=customer_id, arrival=t, svc_start=NA, 
+                            svc_end=NA, pick_start=NA, pick_end=NA)
+      customer_data <- rbind(customer_data, new_cust)
+      
+      idle_svc <- which(!service_busy)[1]
+      if (!is.na(idle_svc)) {
+        service_busy[idle_svc] <- TRUE
+        customer_data$svc_start[customer_id] <- t
+        svc_time <- rexp(1, mu_service)
+        events <- rbind(events, data.frame(type="SERVICE_COMPLETE", 
+                                          time=t+svc_time, customer=customer_id, server=idle_svc))
+      } else {
+        Q1 <- c(Q1, customer_id)
+      }
+      
+      if (t < closing_time) {
+        next_arr <- generate_next_arrival_nhpp(t)
+        events <- rbind(events, data.frame(type="ARRIVAL", time=next_arr, customer=0, server=0))
+      }
+      
+    } else if (event$type == "SERVICE_COMPLETE") {
+      cust <- event$customer
+      srv <- event$server
+      customer_data$svc_end[cust] <- t
+      service_busy[srv] <- FALSE
+      
+      if (length(Q1) > 0) {
+        next_cust <- Q1[1]
+        Q1 <- Q1[-1]
+        service_busy[srv] <- TRUE
+        customer_data$svc_start[next_cust] <- t
+        svc_time <- rexp(1, mu_service)
+        events <- rbind(events, data.frame(type="SERVICE_COMPLETE",
+                                          time=t+svc_time, customer=next_cust, server=srv))
+      }
+      
+      idle_pick <- which(!pickup_busy)[1]
+      if (!is.na(idle_pick)) {
+        pickup_busy[idle_pick] <- TRUE
+        customer_data$pick_start[cust] <- t
+        pick_time <- rexp(1, mu_pickup)
+        events <- rbind(events, data.frame(type="PICKUP_COMPLETE",
+                                          time=t+pick_time, customer=cust, server=idle_pick))
+      } else {
+        Q2 <- c(Q2, cust)
+      }
+      
+    } else if (event$type == "PICKUP_COMPLETE") {
+      cust <- event$customer
+      srv <- event$server
+      customer_data$pick_end[cust] <- t
+      pickup_busy[srv] <- FALSE
+      
+      if (length(Q2) > 0) {
+        next_cust <- Q2[1]
+        Q2 <- Q2[-1]
+        pickup_busy[srv] <- TRUE
+        customer_data$pick_start[next_cust] <- t
+        pick_time <- rexp(1, mu_pickup)
+        events <- rbind(events, data.frame(type="PICKUP_COMPLETE",
+                                          time=t+pick_time, customer=next_cust, server=srv))
+      }
     }
   }
-  return(arrivals)
+  
+  customer_data$wait_svc <- customer_data$svc_start - customer_data$arrival
+  customer_data$wait_pick <- customer_data$pick_start - customer_data$svc_end
+  customer_data$total_time <- customer_data$pick_end - customer_data$arrival
+  customer_data$svc_time <- customer_data$svc_end - customer_data$svc_start
+  customer_data$pick_time <- customer_data$pick_end - customer_data$pick_start
+  
+  summary_stats <- list(
+    n_customers = nrow(customer_data),
+    avg_wait_service = mean(customer_data$wait_svc, na.rm=TRUE) * 60,
+    avg_wait_pickup = mean(customer_data$wait_pick, na.rm=TRUE) * 60,
+    avg_total_time = mean(customer_data$total_time, na.rm=TRUE) * 60,
+    max_wait_service = max(customer_data$wait_svc, na.rm=TRUE) * 60,
+    max_wait_pickup = max(customer_data$wait_pick, na.rm=TRUE) * 60,
+    service_utilization = sum(customer_data$svc_time, na.rm=TRUE) / (sim_hours * n_service_servers),
+    pickup_utilization = sum(customer_data$pick_time, na.rm=TRUE) / (sim_hours * n_pickup_servers)
+  )
+  
+  return(list(
+    customers = customer_data,
+    summary = summary_stats,
+    config = list(n_service_servers=n_service_servers, n_pickup_servers=n_pickup_servers,
+                 mu_service=mu_service, mu_pickup=mu_pickup)
+  ))
 }
-
-# Pre-generate the daily schedule
-arrival_schedule <- generate_nhpp_schedule(sim_duration)
-cat(sprintf("Generated %d customers for the day based on NHPP.\n", length(arrival_schedule)))
-
-# ------------------------------------------------------------------------------
-# PART 2: SIMULATION ENGINE (State & Loop)
-# ------------------------------------------------------------------------------
-
-# Queue Helper Functions (Efficient Implementation)
-create_queue <- function() {
-  list(items = list(), head = 1, tail = 1)
-}
-
-enqueue <- function(queue, item) {
-  idx <- as.character(queue$tail)  # Use character index for lists
-  queue$items[[idx]] <- item
-  queue$tail <- queue$tail + 1
-  queue
-}
-
-dequeue <- function(queue) {
-  if (queue$head >= queue$tail) {
-    return(list(queue = queue, item = NULL))
-  }
-  idx <- as.character(queue$head)  # Use character index for lists
-  item <- queue$items[[idx]]
-  queue$items[[idx]] <- NULL
-  queue$head <- queue$head + 1
-  list(queue = queue, item = item)
-}
-
-is_empty <- function(queue) {
-  queue$head >= queue$tail
-}
-
-# Initialize Clock & Counters
-t_now <- 0
-cust_ptr <- 1 # Pointer to the next customer in arrival_schedule
-total_customers <- length(arrival_schedule)
-
-# System State [cite: 20]
-n_queue1 <- 0         # Queue for Service Window
-n_queue2 <- 0         # Queue for Catering Window
-server1_busy <- FALSE # Service Window Status
-server2a_busy <- FALSE # Catering Window A Status
-server2b_busy <- FALSE # Catering Window B Status
-
-# Event Calendar (Next occurrence time for each event type)
-t_next_arrival <- if(total_customers > 0) arrival_schedule[1] else Inf
-t_dep1  <- Inf        # Departure from Service Window
-t_dep2a <- Inf        # Departure from Catering A
-t_dep2b <- Inf        # Departure from Catering B
-
-# Data Storage
-# Columns: ID, Arrival, Start_S1, End_S1, Start_S2, End_S2
-stats <- data.frame(
-  id = 1:total_customers,
-  arrival_time = arrival_schedule,
-  start_s1 = NA, end_s1 = NA,
-  start_s2 = NA, end_s2 = NA
-)
-
-# Queue Trackers (Store IDs) - Using efficient list-based queues
-q1_ids <- create_queue()
-q2_ids <- create_queue()
-id_in_s1 <- 0
-id_in_s2a <- 0
-id_in_s2b <- 0
-
-# --- MAIN LOOP ---
-# Continue as long as:
-# 1. New customers are still scheduled to arrive (t_next_arrival != Inf)
-# 2. OR People are in the system (queues not empty, servers busy)
-while (t_next_arrival != Inf || !is_empty(q1_ids) || !is_empty(q2_ids) || 
-       server1_busy || server2a_busy || server2b_busy) {
-
-  # Determine Next Event
-  next_event_time <- min(t_next_arrival, t_dep1, t_dep2a, t_dep2b)
-
-  if (next_event_time == Inf) break # Logic safety break
-  t_now <- next_event_time
-
-  # -----------------------------------------------------------
-  # EVENT A: Customer Arrival [cite: 20]
-  # -----------------------------------------------------------
-  if (t_now == t_next_arrival) {
-    # New customer enters Queue 1 logic
-    cid <- cust_ptr
-
-    if (!server1_busy) {
-      # Server 1 Free: Start Service Immediately
-      server1_busy <- TRUE
-      id_in_s1 <- cid
-      stats$start_s1[cid] <- t_now
-      t_dep1 <- t_now + rexp(1, mu_service)
-    } else {
-      # Server 1 Busy: Join Queue 1
-      n_queue1 <- n_queue1 + 1
-      q1_ids <- enqueue(q1_ids, cid)
-    }
-
-    # Schedule next arrival
-    cust_ptr <- cust_ptr + 1
-    if (cust_ptr <= total_customers) {
-      t_next_arrival <- arrival_schedule[cust_ptr]
-    } else {
-      t_next_arrival <- Inf # No more customers today
-    }
-  }
-
-  # -----------------------------------------------------------
-  # EVENT B: Service Window Completion (S1 -> Queue 2) [cite: 20]
-  # -----------------------------------------------------------
-  else if (t_now == t_dep1) {
-    finished_cid <- id_in_s1
-    stats$end_s1[finished_cid] <- t_now
-
-    # 1. Move Customer to Catering Stage (S2)
-    # Check Server 2A first, then 2B
-    if (!server2a_busy) {
-      server2a_busy <- TRUE
-      id_in_s2a <- finished_cid
-      stats$start_s2[finished_cid] <- t_now
-      t_dep2a <- t_now + rexp(1, mu_catering)
-    } else if (!server2b_busy) {
-      server2b_busy <- TRUE
-      id_in_s2b <- finished_cid
-      stats$start_s2[finished_cid] <- t_now
-      t_dep2b <- t_now + rexp(1, mu_catering)
-    } else {
-      # Both busy: Join Queue 2
-      n_queue2 <- n_queue2 + 1
-      q2_ids <- enqueue(q2_ids, finished_cid)
-    }
-
-    # 2. Pull next customer for Service Window (S1)
-    if (!is_empty(q1_ids)) {
-      result <- dequeue(q1_ids)
-      q1_ids <- result$queue
-      next_cid <- result$item
-      n_queue1 <- n_queue1 - 1
-      id_in_s1 <- next_cid
-      stats$start_s1[next_cid] <- t_now
-      t_dep1 <- t_now + rexp(1, mu_service)
-    } else {
-      server1_busy <- FALSE
-      t_dep1 <- Inf
-    }
-  }
-
-  # -----------------------------------------------------------
-  # EVENT C: Catering Server A Completion (Exit System)
-  # -----------------------------------------------------------
-  else if (t_now == t_dep2a) {
-    finished_cid <- id_in_s2a
-    stats$end_s2[finished_cid] <- t_now
-
-    if (!is_empty(q2_ids)) {
-      result <- dequeue(q2_ids)
-      q2_ids <- result$queue
-      next_cid <- result$item
-      n_queue2 <- n_queue2 - 1
-      id_in_s2a <- next_cid
-      stats$start_s2[next_cid] <- t_now
-      t_dep2a <- t_now + rexp(1, mu_catering)
-    } else {
-      server2a_busy <- FALSE
-      t_dep2a <- Inf
-    }
-  }
-
-  # -----------------------------------------------------------
-  # EVENT D: Catering Server B Completion (Exit System)
-  # -----------------------------------------------------------
-  else if (t_now == t_dep2b) {
-    finished_cid <- id_in_s2b
-    stats$end_s2[finished_cid] <- t_now
-
-    if (!is_empty(q2_ids)) {
-      result <- dequeue(q2_ids)
-      q2_ids <- result$queue
-      next_cid <- result$item
-      n_queue2 <- n_queue2 - 1
-      id_in_s2b <- next_cid
-      stats$start_s2[next_cid] <- t_now
-      t_dep2b <- t_now + rexp(1, mu_catering)
-    } else {
-      server2b_busy <- FALSE
-      t_dep2b <- Inf
-    }
-  }
-}
-
-# ------------------------------------------------------------------------------
-# PART 3: ANALYSIS & INSIGHTS [cite: 23, 24]
-# ------------------------------------------------------------------------------
-
-# 1. Metric Calculation
-stats$wait_time_ordering <- stats$start_s1 - stats$arrival_time
-stats$wait_time_catering <- stats$start_s2 - stats$end_s1
-stats$total_time <- stats$end_s2 - stats$arrival_time
-
-# 2. Console Report
-cat("\n========================================================\n")
-cat(" TASK 2: McDonald's Simulation Report (NHPP Model)\n")
-cat("========================================================\n")
-cat(sprintf("Model: 1 Service Window + 2 Catering Windows\n"))
-cat(sprintf("Arrival Pattern: Continuous Daily Cycle (Peaks at 12:30 & 17:30)\n"))
-cat(sprintf("Total Customers Served: %d\n", nrow(stats)))
-cat("\n[Wait Time Analysis]\n")
-cat(sprintf("Avg Wait (Ordering):  %.2f mins\n", mean(stats$wait_time_ordering, na.rm=T)*60))
-cat(sprintf("Avg Wait (Catering):  %.2f mins\n", mean(stats$wait_time_catering, na.rm=T)*60))
-cat(sprintf("Avg Total Time:       %.2f mins\n", mean(stats$total_time, na.rm=T)*60))
-
-# 3. Overtime Analysis
-last_departure <- max(stats$end_s2, na.rm = TRUE)
-overtime <- max(0, last_departure - sim_duration)
-cat("\n[Efficiency Analysis]\n")
-cat(sprintf("Shop Closed (Entry):  %.2f hours\n", sim_duration))
-cat(sprintf("Last Departure:       %.2f hours\n", last_departure))
-cat(sprintf("Overtime Required:    %.2f mins\n", overtime * 60))
-
-# ------------------------------------------------------------------------------
-# PART 4: VISUALIZATION
-# ------------------------------------------------------------------------------
-# Plotting the arrival distribution to verify the NHPP shape
-par(mfrow=c(2,2)) # 2x2 Grid
-
-# Plot 1: Arrival Rate Shape
-hist(stats$arrival_time, breaks=20, col="gray90", border="gray50",
-     main="Customer Arrival Pattern (NHPP)", xlab="Time (Hours)", ylab="Count")
-# Overlay the theoretical curve roughly
-curve(get_lambda_at_t(x)* (total_customers/integrate(get_lambda_at_t, 0, 10)$value), 
-      add=TRUE, col="red", lwd=2, lty=2)
-legend("topright", legend="Theoretical Rate", col="red", lty=2, bty="n", cex=0.8)
-
-# Plot 2: Wait Time Ordering
-hist(stats$wait_time_ordering * 60, col="skyblue", border="white", 
-     main="Wait Time: Ordering Queue", xlab="Minutes")
-
-# Plot 3: Wait Time Catering
-hist(stats$wait_time_catering * 60, col="lightgreen", border="white", 
-     main="Wait Time: Catering Queue", xlab="Minutes")
-
-# Plot 4: Total Time in System vs Arrival Time (To see peak impact)
-plot(stats$arrival_time, stats$total_time * 60, pch=16, col=rgb(0,0,0,0.3),
-     main="Time in System by Arrival Hour", xlab="Arrival Hour", ylab="Total Time (min)")
-abline(h=mean(stats$total_time*60), col="red", lwd=2)
-
-par(mfrow=c(1,1)) # Reset
